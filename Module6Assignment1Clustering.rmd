@@ -1,0 +1,138 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Module 6 - Assignment 1
+## Clustering
+### Chrissy Wilson
+
+Libraries
+
+```{r}
+library(tidyverse)
+library(cluster)
+library(factoextra)
+library(dendextend)
+```
+
+Dataset
+
+```{r}
+trucks = read_csv("trucks.csv")
+str(trucks)
+summary(trucks)
+```
+
+Task 1
+
+```{r}
+ggplot(trucks, aes(Distance,Speeding))+
+  geom_point()
+```
+
+In the graph above we can see scattered and spread data that is appears to be forming into clusters. We can see a very dense cluster around lower distance and the lower percentage of drivers speeding. Another cluster appears to form around higher mileage driven (150 to 225) and a lower percentage of speeding. Two more clusters could be indentified with lower mileage driven and higher percentage of speeding, and greater mileage correlated also with higher percentage of speeding.
+
+Task 2
+
+```{r}
+trucks2 = trucks %>% 
+  select(c(Distance,Speeding))
+trucks2 = as.data.frame(scale(trucks2))
+summary(trucks2)
+```
+
+Task 3
+
+```{r}
+set.seed(1234)
+clusters1 <- kmeans(trucks2, 2)
+```
+```{r}
+fviz_cluster(clusters1, trucks2)
+```
+
+The graph above shows two groups of clusters where each cluster shares some common characteristics.The "blue" cluster appears to group the lower percentages of drivers speeding and the "red" cluster groups everyone else to the higher percentages of people speeding.
+
+Task 4
+
+```{r}
+set.seed(123)
+fviz_nbclust(trucks2, kmeans, method = "wss")
+fviz_nbclust(trucks2, kmeans, method = "silhouette")
+```
+
+Between the two methods we can see that the optimal number of clusters is right around 4. Our slope from the first graph changes drastically and bottoms out right at 4, and our second graph shows us a maximum value at 4 clusters, as well. The consensus would be to use 4 clusters.
+
+Task 5
+
+```{r}
+set.seed(1234)
+clusters2 <- kmeans(trucks2, 4)
+fviz_cluster(clusters2, trucks2)
+```
+
+Task 6
+
+The 4 clusters that were created are color-coded: blue, red, purple and green. Cluster 1 ,depicted in red, shows drivers speeding more than 10% of their travel distance whether it was a short or longer distance. Cluster 2, in green, shows drivers speeding less than 10% (our initial mean of Speeding)of their travel time during longer distances traveled. Cluster 3, in blue, shows drivers also speeding less than 10% of their travel time but during short driving distances. And cluster 4, depicted in purple, appears to show the amount of drivers speeding an average of about 10% of their travel time during longer distances.
+
+Intermission
+
+```{r}
+wine = read_csv("wineprice.csv")
+str(wine)
+summary(wine)
+```
+
+```{r}
+wine2 <- wine %>%
+  select(c(Price,WinterRain,AGST,HarvestRain,Age))
+wine2 <- as.data.frame(scale(wine2))
+summary(wine2)
+```
+
+Task 7
+
+```{r}
+set.seed(123)
+fviz_nbclust(wine2, kmeans, method = "wss")
+fviz_nbclust(wine2, kmeans, method = "silhouette")
+```
+
+Yes, there appears to be consensus between the two methods. 5 clusters seems to be the optimal solution.
+
+
+Task 8
+
+```{r}
+set.seed(1234)
+clusters3 <- kmeans(wine2, 5)
+fviz_cluster(clusters3, wine2)
+```
+
+Task 9
+
+```{r}
+m = c( "average", "single", "complete", "ward")
+names(m) = c( "average", "single", "complete", "ward")
+
+ac = function(x) {
+  agnes(wine2, method = x)$ac
+}
+map_dbl(m, ac)
+```
+
+Highest "agglomerative coefficient" is Ward coefficient.
+
+```{r}
+hc = agnes(wine2, method = "ward") 
+pltree(hc, cex = 0.6, hang = -1, main = "Agglomerative Dendrogram") 
+```
+
+
+Task 10
+
+```{r}
+hc2 = diana(wine2)
+pltree(hc2, cex = 0.6, hang = -1, main = "Divisive Dendogram")
+```

@@ -1,0 +1,182 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Module 4 - Assignment 2
+## Classification Trees
+### Chrissy Wilson
+
+
+Libraries
+```{r}
+library(tidyverse)
+library(caret)
+library(rpart)
+library(rattle)
+library(RColorBrewer)
+```
+
+```{r}
+parole = read_csv("parole.csv")
+```
+
+Conversions
+
+```{r}
+parole = parole %>%
+  mutate(male = as_factor(male)) %>%
+  mutate(male = fct_recode(male,
+                             "male" = "1",
+                             "female" = "0"))
+parole = parole %>%
+  mutate(race = as_factor(race)) %>%
+  mutate(race = fct_recode(race,
+                             "white" = "1",
+                             "other" = "2"))
+parole = parole %>%
+  mutate(state = as_factor(state)) %>%
+  mutate(state = fct_recode(state,
+                             "Other" = "1",
+                             "Kentucky" = "2",
+                             "Louisiana" = "3",
+                             "Virginia" = "4"))
+parole = parole %>%
+  mutate(crime = as_factor(crime)) %>%
+  mutate(crime = fct_recode(crime,
+                             "Other" = "1",
+                             "larceny" = "2",
+                             "drug-related" = "3",
+                             "driving-related" = "4"))
+parole = parole %>%
+  mutate(multiple.offenses = as_factor(multiple.offenses)) %>%
+  mutate(multiple.offenses = fct_recode(multiple.offenses,
+                             "multipleOffenses" = "1",
+                             "otherwise" = "0"))
+parole = parole %>%
+  mutate(violator = as_factor(violator)) %>%
+  mutate(violator = fct_recode(violator,
+                             "paroleViolation" = "1",
+                             "noParoleViolation" = "0"))
+```
+
+Task 1
+
+```{r}
+set.seed(12345) 
+train.rows = createDataPartition(y = parole$violator, p=0.7, list = FALSE)
+train = parole[train.rows,] 
+test = parole[-train.rows,]
+```
+
+Task 2
+
+```{r}
+tree1 = rpart(violator ~., train, method="class")
+fancyRpartPlot(tree1)
+```
+
+Task 3
+
+Starting at the top of the tree and looking at our first and strongest predictor, I would choose NO (to the right) since our parolee is from Louisiana and not, "Other", "Kentucky" or "Virginia". Our next node is "race" and unfortunately, no information is given whether the parolee is white or not. If he/she was to be white then I would go the YES route and the tree would classify him/her as a "noParoleViolation. However, if the parolee was other than white, I would choose NO and get to the next node of "time.served. Knowing that our parolee served 5 years, I would choose YES at the next node since 5 is greater than 3.5. That decision will lead us to the "age" variable. Our parolee is not less than 30 years old and therefore I would go the NO route. I made it to the end of the tree with the prediction that our parolee would be classified as a parole violator.
+
+Task 4
+
+```{r}
+printcp(tree1)
+plotcp(tree1)
+```
+
+According to the printcp and plotcp, it would be best to select the first CP value of 0.030303 to yield the best minimum cross-validated error. Anything less than 0.023 will result in greater values of cross-validated error.
+
+Task 5
+
+
+```{r}
+tree2 = prune(tree1,cp= tree1$cptable[which.min(tree1$cptable[,"xerror"]),"CP"])
+summary(tree2)
+```
+
+"noParoleViolation" appears to be the majority class in the training set with 418 observations (paroleviolation has 55).
+
+Task 6
+
+```{r}
+treepred = predict(tree1, train, type = "class")
+head(treepred)
+```
+```{r}
+confusionMatrix(treepred,train$violator, positive ="noParoleViolation")
+```
+
+This model yields an accuracy of 90.27%, a sensitivity of 95.69% and a specificity of 49.09%.
+
+
+Task 7
+
+```{r}
+treepred_test = predict(tree1, test, type = "class")
+head(treepred_test)
+```
+```{r}
+confusionMatrix(treepred_test,test$violator,positive="noParoleViolation")
+```
+
+There appears to be no significant difference in accuracy between this model and our naive model. There is a slight drop off from our training data set (90.27% accuracy) to the testing data set (89.60% accuracy), but overall the model appears to be a great fit with a high percentage of accuracy.
+
+Task 8
+
+```{r}
+blood = read_csv("Blood.csv")
+```
+Conversion
+
+```{r}
+blood = blood %>%
+  mutate(DonatedMarch = as_factor(DonatedMarch)) %>%
+  mutate(DonatedMarch = fct_recode(DonatedMarch,
+                             "Yes" = "1",
+                             "No" = "0"))
+```
+
+Task 9
+```{r}
+set.seed(1234) 
+train2.rows = createDataPartition(y = blood$DonatedMarch, p=0.7, list = FALSE)
+train2 = blood[train2.rows,] 
+test2 = blood[-train2.rows,]
+```
+```{r}
+treeblood1 = rpart(DonatedMarch ~., train2, method="class")
+fancyRpartPlot(treeblood1)
+```
+```{r}
+printcp(treeblood1)
+plotcp(treeblood1)
+```
+According to the printcp and plotcp, a cp of 0.050667 would yield the best minimum cross-validated error in this model. Anything above that value will result in a higher cross-validated error.
+
+Task 10
+
+```{r}
+treeblood2 = prune(treeblood1,cp= treeblood1$cptable[which.min(treeblood1$cptable[,"xerror"]),"CP"])
+```
+
+```{r}
+treebloodpred = predict(treeblood2,train2, type = "class")
+head(treebloodpred)
+```
+```{r}
+confusionMatrix(treebloodpred,train2$DonatedMarch,positive="Yes")
+```
+
+```{r}
+treebloodpred_test = predict(treeblood2, test2, type = "class")
+head(treebloodpred_test)
+```
+
+```{r}
+confusionMatrix(treebloodpred_test,test2$DonatedMarch,positive="Yes")
+```
+
+Our model for the training data set shows a decent quality with an accuracy of 81.3% which is significantly higher than the naive model accuracy of 76.15%. However, our testing data set model shows quite a drop in accuracy (77.68%) being very similar to its naive model accuracy of 76.34%. This model does not fit the data too well. As we can see in the statistics above, it appears that we are possibly sacrificing some accuracy for specificity (which has a value of 91.23%).
